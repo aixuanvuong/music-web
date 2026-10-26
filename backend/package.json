@@ -1,0 +1,1 @@
+{"description":"Backend MVP cho website phát nhạc lấy nguồn từ YouTube (Node thuan, engine yt-dlp)","engines":{"node":">=18"},"main":"server.js","name":"music-web-backend","private":true,"scripts":{"start":"node server.js"},"version":"0.1.0"}

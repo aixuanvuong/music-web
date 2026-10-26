@@ -1,0 +1,851 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="color-scheme" content="dark" />
+<link rel="icon" href="data:," />
+<title>Music Web — bản test</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0b0b0c;
+    --bg2:#121214;
+    --card:#1a1a1d;
+    --card-hover:#242428;
+    --line:#2a2a2e;
+    --text:#f4f4f2;
+    --muted:#a7a7ad;
+    --faint:#6f6f76;
+    --accent:#1ed760;
+    --accent-dark:#0f3d22;
+    --danger:#ff6b6b;
+    --player-h: 92px;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--text);
+    font-family:"Be Vietnam Pro", system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+    -webkit-font-smoothing:antialiased;
+    padding-bottom: calc(var(--player-h) + 28px);
+  }
+  a{color:inherit}
+
+  /* ---------- Top bar ---------- */
+  .topbar{
+    position:sticky; top:0; z-index:40;
+    background:rgba(11,11,12,.92);
+    backdrop-filter: blur(10px);
+    border-bottom:1px solid var(--line);
+  }
+  .topbar-inner{
+    max-width:1180px; margin:0 auto;
+    padding:14px 18px;
+    display:flex; align-items:center; gap:14px;
+  }
+  .brand{
+    display:flex; align-items:center; gap:10px;
+    font-weight:800; letter-spacing:-.02em; font-size:18px; white-space:nowrap;
+  }
+  .brand-mark{
+    width:34px; height:34px; border-radius:50%;
+    background:var(--accent); color:#062b14;
+    display:grid; place-items:center; flex:0 0 auto;
+  }
+  .brand-mark svg{width:18px; height:18px}
+  .brand small{display:block; font-weight:500; font-size:11px; color:var(--muted); letter-spacing:.02em}
+  .searchbox{
+    flex:1; display:flex; align-items:center; gap:8px;
+    background:var(--bg2); border:1px solid var(--line);
+    border-radius:999px; padding:6px 6px 6px 16px;
+    max-width:640px; margin-left:auto;
+  }
+  .searchbox svg{width:18px; height:18px; color:var(--muted); flex:0 0 auto}
+  .searchbox input{
+    flex:1; min-width:0; background:transparent; border:0; outline:0;
+    color:var(--text); font:inherit; font-size:15px;
+  }
+  .searchbox input::placeholder{color:var(--faint)}
+  .searchbox button{
+    border:0; cursor:pointer; background:var(--accent); color:#062b14;
+    font:inherit; font-weight:700; font-size:14px;
+    padding:9px 18px; border-radius:999px; white-space:nowrap;
+  }
+  .searchbox button:active{transform:scale(.98)}
+
+  .wrap{max-width:1180px; margin:0 auto; padding:22px 18px 8px}
+
+  .status-line{
+    display:flex; align-items:center; gap:8px;
+    color:var(--muted); font-size:13px; margin:2px 0 18px;
+  }
+  .dot{width:8px; height:8px; border-radius:50%; background:var(--accent); flex:0 0 auto}
+  .dot.warn{background:#f5c542}
+  .dot.err{background:var(--danger)}
+
+  section{margin:0 0 34px}
+  .section-head{
+    display:flex; align-items:baseline; justify-content:space-between; gap:12px; margin-bottom:14px;
+  }
+  h2{font-size:21px; margin:0; letter-spacing:-.02em; font-weight:800}
+  .section-head span{color:var(--faint); font-size:13px}
+
+  .grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fill, minmax(168px, 1fr));
+    gap:16px;
+  }
+  .card{
+    background:var(--card);
+    border:1px solid transparent;
+    border-radius:14px;
+    padding:12px;
+    cursor:pointer;
+    text-align:left;
+    font:inherit; color:inherit;
+    width:100%;
+    transition: background .15s ease, border-color .15s ease, transform .15s ease;
+  }
+  .card:hover{background:var(--card-hover)}
+  .card:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+  .card.playing{border-color:var(--accent-dark); background:#16211a}
+  .thumb-wrap{position:relative; border-radius:9px; overflow:hidden; aspect-ratio:16/10; background:#000}
+  .thumb-wrap img{width:100%; height:100%; object-fit:cover; display:block}
+  .thumb-wrap .dur{
+    position:absolute; right:6px; bottom:6px;
+    background:rgba(0,0,0,.82); color:#fff;
+    font-size:11px; font-weight:600; padding:2px 6px; border-radius:5px;
+  }
+  .thumb-wrap .play-badge{
+    position:absolute; right:8px; bottom:8px;
+    width:38px; height:38px; border-radius:50%;
+    background:var(--accent); color:#062b14;
+    display:grid; place-items:center;
+    opacity:0; transform:translateY(6px);
+    transition:.18s ease;
+    box-shadow:0 8px 20px rgba(0,0,0,.45);
+  }
+  .card:hover .play-badge, .card.playing .play-badge{opacity:1; transform:none}
+  .play-badge svg{width:16px; height:16px}
+  .card h3{
+    font-size:14px; line-height:1.35; font-weight:600; margin:10px 0 4px;
+    display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;
+  }
+  .card p{margin:0; color:var(--muted); font-size:12.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+
+  .skeleton{
+    border-radius:14px; background:var(--card); padding:12px;
+  }
+  .skeleton .sk-img{aspect-ratio:16/10; border-radius:9px; background:#26262a; animation:pulse 1.2s ease-in-out infinite}
+  .skeleton .sk-line{height:12px; border-radius:6px; background:#26262a; margin-top:10px; animation:pulse 1.2s ease-in-out infinite}
+  .skeleton .sk-line.short{width:60%}
+  @keyframes pulse{0%,100%{opacity:.55}50%{opacity:1}}
+
+  .empty{
+    border:1px dashed var(--line); border-radius:14px;
+    padding:26px 18px; color:var(--muted); font-size:14px; line-height:1.6;
+  }
+  .empty strong{color:var(--text)}
+
+  /* ---------- Lyrics panel ---------- */
+  .lyrics-panel{
+    display:none;
+    background:var(--bg2); border:1px solid var(--line); border-radius:16px;
+    padding:20px 22px; margin:0 0 30px;
+    max-height:46vh; overflow:auto;
+  }
+  .lyrics-panel.open{display:block}
+  .lyrics-panel h3{margin:0 0 4px; font-size:16px}
+  .lyrics-panel .lyr-meta{color:var(--muted); font-size:13px; margin-bottom:12px}
+  .lyrics-panel pre{
+    margin:0; white-space:pre-wrap; word-break:break-word;
+    font:inherit; font-size:14.5px; line-height:1.9; color:#dcdce0;
+  }
+
+  footer{
+    max-width:1180px; margin:6px auto 0; padding:14px 18px 10px;
+    color:var(--faint); font-size:12px; line-height:1.6; border-top:1px solid var(--line);
+  }
+
+  /* ---------- Toast ---------- */
+  .toast{
+    position:fixed; left:50%; bottom:calc(var(--player-h) + 16px); transform:translateX(-50%) translateY(8px);
+    background:#2b1717; color:#ffd9d9; border:1px solid #5a2b2b;
+    padding:11px 16px; border-radius:10px; font-size:13.5px; font-weight:500;
+    opacity:0; pointer-events:none; transition:.2s ease; z-index:80;
+    max-width:min(92vw, 520px); text-align:center;
+  }
+  .toast.show{opacity:1; transform:translateX(-50%) translateY(0)}
+
+  /* ---------- Player ---------- */
+  .player{
+    position:fixed; left:0; right:0; bottom:0; z-index:60;
+    background:#101012; border-top:1px solid var(--line);
+    height:var(--player-h);
+  }
+  .player-inner{
+    max-width:1180px; margin:0 auto; height:100%;
+    padding:10px 18px;
+    display:grid; grid-template-columns: 1fr auto 1fr; align-items:center; gap:16px;
+  }
+  .now{
+    display:flex; align-items:center; gap:12px; min-width:0;
+  }
+  .now img{
+    width:56px; height:56px; border-radius:8px; object-fit:cover; background:#000; flex:0 0 auto;
+  }
+  .now .now-text{min-width:0}
+  .now .now-title{font-size:14px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+  .now .now-artist{font-size:12.5px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+  .now .now-empty{color:var(--faint); font-size:13px}
+
+  .controls{display:flex; flex-direction:column; align-items:center; gap:6px; min-width:320px}
+  .ctrl-row{display:flex; align-items:center; gap:10px}
+  .icon-btn{
+    border:0; background:transparent; color:var(--text); cursor:pointer;
+    width:38px; height:38px; border-radius:50%; display:grid; place-items:center;
+  }
+  .icon-btn:hover{background:#232326}
+  .icon-btn svg{width:19px; height:19px}
+  .icon-btn:disabled{opacity:.35; cursor:default; background:transparent}
+  .play-btn{
+    width:44px; height:44px; background:var(--accent); color:#062b14;
+  }
+  .play-btn:hover{background:#35e876}
+  .play-btn svg{width:19px; height:19px}
+  .seek-row{display:flex; align-items:center; gap:10px; width:100%; font-size:11.5px; color:var(--muted); font-variant-numeric:tabular-nums}
+  input[type="range"]{
+    -webkit-appearance:none; appearance:none;
+    flex:1; height:4px; border-radius:99px; background:#3a3a3f; outline:none; cursor:pointer;
+  }
+  input[type="range"]::-webkit-slider-thumb{
+    -webkit-appearance:none; width:13px; height:13px; border-radius:50%; background:#fff;
+    box-shadow:0 1px 6px rgba(0,0,0,.5);
+  }
+  input[type="range"]::-moz-range-thumb{width:13px; height:13px; border:0; border-radius:50%; background:#fff}
+
+  .player-right{display:flex; align-items:center; justify-content:flex-end; gap:6px}
+  .lyr-btn{
+    border:1px solid var(--line); background:transparent; color:var(--text);
+    font:inherit; font-size:12.5px; font-weight:600;
+    padding:8px 13px; border-radius:999px; cursor:pointer; white-space:nowrap;
+  }
+  .lyr-btn.active{background:var(--accent); border-color:var(--accent); color:#062b14}
+  .vol{display:flex; align-items:center; gap:6px; color:var(--muted)}
+  .vol svg{width:17px; height:17px}
+  .vol input{width:84px; flex:none}
+
+  .eq-bars{display:none; align-items:flex-end; gap:2px; height:12px}
+  .card.playing .eq-bars{display:inline-flex}
+  .eq-bars i{width:3px; background:var(--accent); border-radius:2px; animation:eq 0.8s ease-in-out infinite}
+  .eq-bars i:nth-child(2){animation-delay:.18s}.eq-bars i:nth-child(3){animation-delay:.36s}
+  @keyframes eq{0%,100%{height:4px}50%{height:12px}}
+  @media (prefers-reduced-motion: reduce){
+    .eq-bars i, .skeleton .sk-img, .skeleton .sk-line{animation:none}
+    html{scroll-behavior:auto}
+  }
+
+  @media (max-width: 760px){
+    :root{--player-h: 128px}
+    .brand small{display:none}
+    .brand{font-size:16px}
+    .topbar-inner{flex-wrap:wrap; padding:12px 14px}
+    .searchbox{order:3; flex-basis:100%; max-width:none; margin-left:0}
+    .wrap{padding:16px 14px 4px}
+    .grid{grid-template-columns:repeat(2, 1fr); gap:12px}
+    .card{padding:9px}
+    .card h3{font-size:13px}
+    .player-inner{grid-template-columns:1fr auto; grid-template-rows:auto auto; padding:10px 14px; gap:6px 10px}
+    .controls{grid-column:1 / -1; order:3; min-width:0; width:100%}
+    .player-right{justify-content:flex-end}
+    .vol{display:none}
+    .now img{width:46px; height:46px}
+  }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 18.5a3.5 3.5 0 1 1-2-3.16V5.6c0-.4.27-.76.66-.87l9-2.4A1 1 0 0 1 20 3.3v11.2a3.5 3.5 0 1 1-2-3.16V6.1l-7 1.87v10.53Z"/></svg>
+      </span>
+      <span>Music Web<small>bản test nghe nhạc từ YouTube</small></span>
+    </div>
+    <form class="searchbox" id="searchForm" role="search">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.8-3.8"/></svg>
+      <input id="searchInput" type="search" placeholder="Tìm bài hát, ca sĩ… ví dụ: Sơn Tùng, Đen Vâu" autocomplete="off" aria-label="Tìm kiếm bài hát" />
+      <button type="submit">Tìm</button>
+    </form>
+  </div>
+</header>
+
+<main class="wrap">
+  <p class="status-line"><span class="dot" id="statusDot"></span><span id="statusText">Đang tải gợi ý trang chủ…</span></p>
+
+  <div class="lyrics-panel" id="lyricsPanel" aria-live="polite">
+    <h3 id="lyricsTitle">Lời nhạc</h3>
+    <div class="lyr-meta" id="lyricsMeta"></div>
+    <pre id="lyricsBody">Chọn một bài để xem lời.</pre>
+  </div>
+
+  <div id="content"></div>
+</main>
+
+<footer>
+  Bản test kỹ thuật — nguồn dữ liệu/stream qua Invidious instance công cộng (yt.chocolatemoo53.com), có thể chậm hoặc gián đoạn khi instance quá tải.
+</footer>
+
+<div class="toast" id="toast" role="status"></div>
+
+<div class="player" id="player">
+  <div class="player-inner">
+    <div class="now">
+      <img id="nowThumb" alt="" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='56'%3E%3Crect width='56' height='56' fill='%23222226'/%3E%3C/svg%3E" />
+      <div class="now-text">
+        <div class="now-title" id="nowTitle"><span class="now-empty">Chưa chọn bài nào</span></div>
+        <div class="now-artist" id="nowArtist">Bấm vào một thẻ bài hát để bắt đầu nghe</div>
+      </div>
+    </div>
+
+    <div class="controls">
+      <div class="ctrl-row">
+        <button class="icon-btn" id="prevBtn" aria-label="Bài trước" disabled>
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 5h2v14H6zM20 5v14L9.5 12z"/></svg>
+        </button>
+        <button class="icon-btn play-btn" id="playBtn" aria-label="Phát / tạm dừng" disabled>
+          <svg id="playIcon" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+        </button>
+        <button class="icon-btn" id="nextBtn" aria-label="Bài sau" disabled>
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M16 5h2v14h-2zM4 5v14l10.5-7z"/></svg>
+        </button>
+      </div>
+      <div class="seek-row">
+        <span id="curTime">0:00</span>
+        <input type="range" id="seek" min="0" max="1000" value="0" aria-label="Thanh tua bài hát" />
+        <span id="durTime">0:00</span>
+      </div>
+    </div>
+
+    <div class="player-right">
+      <div class="vol" aria-hidden="false">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 9v6h4l5 4V5L8 9H4Zm12.5 3a3.5 3.5 0 0 0-2-3.15v6.3a3.5 3.5 0 0 0 2-3.15Z"/></svg>
+        <input type="range" id="volume" min="0" max="100" value="85" aria-label="Âm lượng" />
+      </div>
+      <button class="lyr-btn" id="lyricsBtn">Lời nhạc</button>
+    </div>
+  </div>
+</div>
+
+<audio id="audio" preload="metadata"></audio>
+
+<script>
+(function(){
+  "use strict";
+
+  var INSTANCES = [
+    "https://yt.chocolatemoo53.com",
+    "https://inv.nadeko.net",
+    "https://invidious.nerdvpn.de"
+  ];
+  var activeInstance = 0;
+
+  var audio = document.getElementById("audio");
+  var content = document.getElementById("content");
+  var statusDot = document.getElementById("statusDot");
+  var statusText = document.getElementById("statusText");
+  var toastEl = document.getElementById("toast");
+  var seek = document.getElementById("seek");
+  var curTimeEl = document.getElementById("curTime");
+  var durTimeEl = document.getElementById("durTime");
+  var playBtn = document.getElementById("playBtn");
+  var playIcon = document.getElementById("playIcon");
+  var prevBtn = document.getElementById("prevBtn");
+  var nextBtn = document.getElementById("nextBtn");
+  var nowThumb = document.getElementById("nowThumb");
+  var nowTitle = document.getElementById("nowTitle");
+  var nowArtist = document.getElementById("nowArtist");
+  var lyricsBtn = document.getElementById("lyricsBtn");
+  var lyricsPanel = document.getElementById("lyricsPanel");
+  var lyricsTitle = document.getElementById("lyricsTitle");
+  var lyricsMeta = document.getElementById("lyricsMeta");
+  var lyricsBody = document.getElementById("lyricsBody");
+  var volumeEl = document.getElementById("volume");
+
+  var queue = [];        // danh sách bài đang hiển thị (hàng đợi hiện tại)
+  var currentIndex = -1; // vị trí trong queue
+  var currentTrack = null;
+  var lyricsVisible = false;
+  var lyricsCache = {};
+  var toastTimer = null;
+  var seeking = false;
+
+  audio.volume = 0.85;
+
+  /* ---------------- Helpers ---------------- */
+  function esc(s){
+    return String(s == null ? "" : s)
+      .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
+      .replace(/"/g,"&quot;").replace(/'/g,"&#39;");
+  }
+  function fmt(sec){
+    sec = Math.max(0, Math.floor(sec || 0));
+    var m = Math.floor(sec / 60), s = sec % 60;
+    return m + ":" + (s < 10 ? "0" : "") + s;
+  }
+  function setStatus(kind, text){
+    statusDot.className = "dot" + (kind === "warn" ? " warn" : kind === "err" ? " err" : "");
+    statusText.textContent = text;
+  }
+  function showToast(msg){
+    toastEl.textContent = msg;
+    toastEl.classList.add("show");
+    if (toastTimer) clearTimeout(toastTimer);
+    toastTimer = setTimeout(function(){ toastEl.classList.remove("show"); }, 4200);
+  }
+  function hideToast(){
+    toastEl.classList.remove("show");
+    if (toastTimer){ clearTimeout(toastTimer); toastTimer = null; }
+  }
+  function thumbOf(item){
+    var thumbs = item.videoThumbnails || [];
+    for (var i = 0; i < thumbs.length; i++){
+      if (thumbs[i].quality === "medium" && thumbs[i].url) return thumbs[i].url;
+    }
+    return "https://i.ytimg.com/vi/" + item.videoId + "/hqdefault.jpg";
+  }
+  function normalizeResults(data){
+    if (!Array.isArray(data)) return [];
+    var out = [];
+    for (var i = 0; i < data.length; i++){
+      var v = data[i];
+      if (!v || v.type !== "video" || !v.videoId) continue;
+      var len = v.lengthSeconds || 0;
+      if (len > 900 || len < 40) continue;
+      out.push({
+        videoId: v.videoId,
+        title: v.title || "Không rõ tên bài",
+        author: v.author || "",
+        lengthSeconds: len,
+        thumb: thumbOf(v)
+      });
+    }
+    return out;
+  }
+
+  /* Fetch qua các instance theo thứ tự; tự chuyển instance khi lỗi / không phải JSON.
+     startOffset: bắt đầu vòng instance từ vị trí lệch đi (để lần thử phát lại dùng nguồn khác) */
+  function fetchFromInstances(path, startOffset){
+    var start = (((activeInstance + (startOffset || 0)) % INSTANCES.length) + INSTANCES.length) % INSTANCES.length;
+    var order = [];
+    for (var k = 0; k < INSTANCES.length; k++) order.push((start + k) % INSTANCES.length);
+    var lastErr = null;
+    function attempt(idx){
+      if (idx >= order.length) return Promise.reject(lastErr || new Error("Tất cả instance đều lỗi"));
+      var inst = INSTANCES[order[idx]];
+      return fetch(inst + path).then(function(res){
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        return res.json();
+      }).then(function(json){
+        activeInstance = order[idx];
+        return json;
+      }).catch(function(err){
+        lastErr = err;
+        return attempt(idx + 1);
+      });
+    }
+    return attempt(0);
+  }
+
+  function searchVideos(query){
+    return fetchFromInstances("/api/v1/search?q=" + encodeURIComponent(query) + "&type=video")
+      .then(normalizeResults);
+  }
+
+  /* ---------------- Render ---------------- */
+  function skeletons(n){
+    var html = '<div class="grid">';
+    for (var i = 0; i < n; i++){
+      html += '<div class="skeleton"><div class="sk-img"></div><div class="sk-line"></div><div class="sk-line short"></div></div>';
+    }
+    return html + "</div>";
+  }
+
+  function cardHTML(track, listId, idx){
+    var isCurrent = currentTrack && currentTrack.videoId === track.videoId;
+    return '<button type="button" class="card' + (isCurrent ? " playing" : "") + '" data-list="' + listId + '" data-idx="' + idx + '">' +
+      '<span class="thumb-wrap">' +
+        '<img loading="lazy" alt="" src="' + esc(track.thumb) + '" onerror="this.onerror=null;this.src=\'https://i.ytimg.com/vi/' + esc(track.videoId) + '/hqdefault.jpg\'">' +
+        '<span class="dur">' + fmt(track.lengthSeconds) + '</span>' +
+        '<span class="play-badge"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></span>' +
+      '</span>' +
+      '<h3>' + esc(track.title) + '</h3>' +
+      '<p>' + esc(track.author) + ' <span class="eq-bars" aria-hidden="true"><i></i><i></i><i></i></span></p>' +
+    '</button>';
+  }
+
+  function sectionHTML(id, title, note, tracks){
+    var html = '<section><div class="section-head"><h2>' + esc(title) + '</h2>' + (note ? '<span>' + esc(note) + '</span>' : '') + '</div>';
+    if (!tracks.length){
+      html += '<div class="empty"><strong>Chưa tải được mục này.</strong><br>Instance Invidious có thể đang quá tải — thử tải lại trang hoặc tìm kiếm một bài hát ở ô phía trên.</div>';
+    } else {
+      html += '<div class="grid">';
+      for (var i = 0; i < tracks.length; i++) html += cardHTML(tracks[i], id, i);
+      html += '</div>';
+    }
+    return html + '</section>';
+  }
+
+  var lists = {}; // listId -> tracks[]
+  function renderSections(sections){
+    lists = {};
+    var html = "";
+    sections.forEach(function(s){
+      lists[s.id] = s.tracks;
+      html += sectionHTML(s.id, s.title, s.note, s.tracks);
+    });
+    content.innerHTML = html;
+  }
+
+  content.addEventListener("click", function(e){
+    var card = e.target.closest(".card");
+    if (!card) return;
+    var list = lists[card.getAttribute("data-list")] || [];
+    var idx = parseInt(card.getAttribute("data-idx"), 10);
+    if (!list.length || isNaN(idx)) return;
+    queue = list.slice();
+    playAt(idx);
+  });
+
+  /* ---------------- Player ---------------- */
+  function markPlayingCard(){
+    var cards = content.querySelectorAll(".card");
+    cards.forEach(function(c){
+      var list = lists[c.getAttribute("data-list")] || [];
+      var t = list[parseInt(c.getAttribute("data-idx"), 10)];
+      c.classList.toggle("playing", !!(t && currentTrack && t.videoId === currentTrack.videoId));
+    });
+  }
+
+  function setPlayIcon(playing){
+    playIcon.innerHTML = playing
+      ? '<path d="M7 5h4v14H7zM13 5h4v14h-4z"/>'
+      : '<path d="M8 5v14l11-7z"/>';
+  }
+
+  function pickAudioFormat(formats){
+    var audios = (formats || []).filter(function(f){
+      return f && f.type && f.type.indexOf("audio") === 0 && f.url;
+    });
+    if (!audios.length) return null;
+    var m4a = audios.filter(function(f){ return (f.container || "").toLowerCase() === "m4a"; });
+    var pool = m4a.length ? m4a : audios;
+    pool.sort(function(a, b){ return (b.bitrate || 0) - (a.bitrate || 0); });
+    return pool[0];
+  }
+
+  /* ---- Trạng thái phát ----
+     loadSeq: mã phiên tải, tăng mỗi lần chọn bài mới. Mọi callback bất đồng bộ
+     (fetch xong, play() resolve/reject, sự kiện error) đều phải kiểm tra phiên
+     của mình còn hiện hành không — kết quả trễ của bài cũ không được phép
+     hiện lỗi (hay ghi đè trạng thái) cho bài đang phát.
+     awaitingTap: play() bị iOS chặn vì được gọi sau fetch bất đồng bộ
+     (NotAllowedError). Đây KHÔNG phải lỗi stream: nguồn đã nạp xong, chỉ chờ
+     người dùng chạm nút phát (đúng cử chỉ) để resume. */
+  var loadSeq = 0;
+  var currentAttempt = 0;
+  var streamLoading = false;
+  var awaitingTap = false;
+  var MAX_STREAM_ATTEMPTS = 3;
+
+  function onPlaybackStarted(track){
+    if (!track || !currentTrack || track.videoId !== currentTrack.videoId) return;
+    awaitingTap = false;
+    streamLoading = false;
+    setPlayIcon(true);
+    hideToast();
+    setStatus("", "Đang phát: " + track.title + " — " + track.author);
+  }
+
+  function failOrRetry(track, seq, attempt){
+    if (seq !== loadSeq) return;
+    // Audio thực tế đang phát thì không có lỗi gì để báo cả
+    if (!audio.paused && audio.readyState >= 2){ onPlaybackStarted(track); return; }
+    if (attempt + 1 < MAX_STREAM_ATTEMPTS){
+      loadStream(track, seq, attempt + 1);
+      return;
+    }
+    // Chỉ tới đây mới là lỗi thật: mọi instance/định dạng đều đã thất bại
+    streamLoading = false;
+    setStatus("err", "Không phát được bài này.");
+    showToast("Không phát được bài này, thử bài khác");
+    setPlayIcon(false);
+  }
+
+  function handlePlayError(err, track, seq, attempt){
+    if (seq !== loadSeq || streamLoading) return;
+    // Race trên iOS: promise báo lỗi nhưng audio thực ra đã phát — coi như thành công
+    if (!audio.paused && audio.readyState >= 2){ onPlaybackStarted(track); return; }
+    var name = err && err.name;
+    if (name === "NotAllowedError"){
+      // Bị chính sách autoplay chặn vì play() gọi sau fetch: nguồn không lỗi.
+      // Giữ nguyên src đã nạp, chờ người dùng chạm nút phát để resume trong cử chỉ.
+      awaitingTap = true;
+      setPlayIcon(false);
+      hideToast();
+      setStatus("warn", "Nhấn nút phát để nghe: " + track.title);
+      return;
+    }
+    if (name === "AbortError"){
+      // Lần phát bị chen bởi lần tải/phát mới hơn hoặc thao tác dừng — bỏ qua
+      return;
+    }
+    failOrRetry(track, seq, attempt);
+  }
+
+  function attemptPlay(track, seq, attempt){
+    var p;
+    try { p = audio.play(); }
+    catch (e){ handlePlayError(e, track, seq, attempt); return; }
+    if (p && typeof p.catch === "function"){
+      p.then(function(){
+        if (seq !== loadSeq) return;
+        onPlaybackStarted(track);
+      }).catch(function(err){
+        handlePlayError(err, track, seq, attempt);
+      });
+    }
+  }
+
+  function loadStream(track, seq, attempt){
+    if (seq !== loadSeq) return;
+    currentAttempt = attempt;
+    streamLoading = true;
+    setStatus("warn", attempt > 0
+      ? "Đang thử nguồn phát khác: " + track.title + "…"
+      : "Đang lấy link phát: " + track.title + "…");
+    fetchFromInstances("/api/v1/videos/" + encodeURIComponent(track.videoId) + "?local=true", attempt)
+      .then(function(data){
+        if (seq !== loadSeq) return;
+        var fmtObj = pickAudioFormat(data && data.adaptiveFormats);
+        if (!fmtObj) throw new Error("Không có định dạng audio");
+        audio.src = fmtObj.url;
+        streamLoading = false;
+        attemptPlay(track, seq, attempt);
+      })
+      .catch(function(){
+        if (seq !== loadSeq) return;
+        streamLoading = false;
+        failOrRetry(track, seq, attempt);
+      });
+  }
+
+  var PLACEHOLDER_THUMB = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='56'%3E%3Crect width='56' height='56' fill='%23222226'/%3E%3C/svg%3E";
+  function setPlayerThumb(track){
+    // Dùng đúng chuỗi nguồn như thẻ bài hát: ảnh của instance trước,
+    // lỗi thì dự phòng sang i.ytimg.com (nguồn đang hiển thị tốt ở thẻ),
+    // lỗi nữa thì về ảnh trống — không để icon ảnh vỡ của trình duyệt.
+    var fallback = "https://i.ytimg.com/vi/" + track.videoId + "/hqdefault.jpg";
+    nowThumb.onerror = function(){
+      nowThumb.onerror = null;
+      nowThumb.src = nowThumb.src.indexOf("i.ytimg.com") === -1 ? fallback : PLACEHOLDER_THUMB;
+    };
+    nowThumb.src = track.thumb || fallback;
+    nowThumb.alt = "Ảnh bìa: " + track.title;
+  }
+
+  function playAt(idx){
+    if (idx < 0 || idx >= queue.length) return;
+    currentIndex = idx;
+    currentTrack = queue[idx];
+    var t = currentTrack;
+
+    // Phiên tải mới: vô hiệu mọi callback trễ của bài trước, xóa lỗi/toast cũ
+    loadSeq++;
+    var seq = loadSeq;
+    currentAttempt = 0;
+    awaitingTap = false;
+    streamLoading = false;
+    hideToast();
+
+    setPlayerThumb(t);
+    nowTitle.textContent = t.title;
+    nowArtist.textContent = t.author || "";
+    document.title = "▶ " + t.title + " — " + (t.author || "") + " | Music Web";
+
+    playBtn.disabled = false;
+    prevBtn.disabled = queue.length <= 1;
+    nextBtn.disabled = queue.length <= 1;
+    seek.value = 0;
+    curTimeEl.textContent = "0:00";
+    durTimeEl.textContent = fmt(t.lengthSeconds);
+
+    markPlayingCard();
+    setPlayIcon(true);
+    loadLyricsFor(t);
+    loadStream(t, seq, 0);
+  }
+
+  playBtn.addEventListener("click", function(){
+    if (!currentTrack) return;
+    if (audio.paused){
+      if (streamLoading) return; // đang lấy link phát, chờ thêm một nhịp
+      // play() gọi ngay trong sự kiện chạm: đây là cử chỉ iOS chấp nhận,
+      // resume được cả trường hợp trước đó bị NotAllowedError chặn.
+      awaitingTap = false;
+      attemptPlay(currentTrack, loadSeq, currentAttempt);
+    } else {
+      audio.pause();
+    }
+  });
+  prevBtn.addEventListener("click", function(){
+    if (currentIndex > 0) playAt(currentIndex - 1);
+    else if (queue.length) playAt(queue.length - 1);
+  });
+  nextBtn.addEventListener("click", function(){
+    if (currentIndex < queue.length - 1) playAt(currentIndex + 1);
+    else if (queue.length) playAt(0);
+  });
+
+  audio.addEventListener("play", function(){ setPlayIcon(true); });
+  audio.addEventListener("playing", function(){
+    // Audio thực sự phát ra tiếng: xóa mọi banner/toast lỗi còn sót của lần thử trước
+    if (currentTrack) onPlaybackStarted(currentTrack);
+  });
+  audio.addEventListener("pause", function(){
+    setPlayIcon(false);
+    if (currentTrack) document.title = currentTrack.title + " — " + (currentTrack.author || "") + " | Music Web";
+  });
+  audio.addEventListener("ended", function(){
+    if (queue.length > 1) playAt((currentIndex + 1) % queue.length);
+  });
+  audio.addEventListener("error", function(){
+    if (!currentTrack || !audio.src) return;
+    if (streamLoading) return; // lỗi của nguồn cũ trong lúc đang tải bài mới
+    if (!audio.paused || audio.readyState >= 2) return; // đang phát thật — không phải lỗi
+    if (awaitingTap) return; // nguồn đã nạp, chỉ chờ người dùng chạm phát
+    // Lỗi nạp nguồn thật: thử instance/định dạng tiếp theo, hết lựa chọn mới báo lỗi
+    failOrRetry(currentTrack, loadSeq, currentAttempt);
+  });
+  audio.addEventListener("loadedmetadata", function(){
+    if (isFinite(audio.duration) && audio.duration > 0) durTimeEl.textContent = fmt(audio.duration);
+  });
+  audio.addEventListener("timeupdate", function(){
+    if (seeking) return;
+    if (isFinite(audio.duration) && audio.duration > 0){
+      seek.value = Math.round((audio.currentTime / audio.duration) * 1000);
+      curTimeEl.textContent = fmt(audio.currentTime);
+    }
+  });
+  seek.addEventListener("input", function(){
+    seeking = true;
+    if (isFinite(audio.duration) && audio.duration > 0){
+      curTimeEl.textContent = fmt((seek.value / 1000) * audio.duration);
+    }
+  });
+  seek.addEventListener("change", function(){
+    if (isFinite(audio.duration) && audio.duration > 0){
+      audio.currentTime = (seek.value / 1000) * audio.duration;
+    }
+    seeking = false;
+  });
+  volumeEl.addEventListener("input", function(){
+    audio.volume = volumeEl.value / 100;
+  });
+
+  /* ---------------- Lyrics (LRCLIB) ---------------- */
+  function stripTimestamps(text){
+    return String(text || "").replace(/\[\d{1,2}:\d{2}(?:[.:]\d{1,3})?\]/g, "").replace(/\n{3,}/g, "\n\n").trim();
+  }
+  function loadLyricsFor(track){
+    lyricsTitle.textContent = "Lời nhạc — " + track.title;
+    lyricsMeta.textContent = track.author || "";
+    if (lyricsCache[track.videoId]){
+      lyricsBody.textContent = lyricsCache[track.videoId];
+      return;
+    }
+    lyricsBody.textContent = "Đang tìm lời nhạc…";
+    var url = "https://lrclib.net/api/search?track_name=" + encodeURIComponent(track.title) +
+              (track.author ? "&artist_name=" + encodeURIComponent(track.author) : "");
+    fetch(url).then(function(r){
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      return r.json();
+    }).then(function(data){
+      var found = null;
+      if (Array.isArray(data)){
+        for (var i = 0; i < data.length; i++){
+          if (data[i] && (data[i].syncedLyrics || data[i].plainLyrics)){ found = data[i]; break; }
+        }
+      }
+      var text = found ? stripTimestamps(found.syncedLyrics || found.plainLyrics) : "";
+      if (!text) text = "Chưa tìm thấy lời cho bài này trên LRCLIB.";
+      lyricsCache[track.videoId] = text;
+      if (currentTrack && currentTrack.videoId === track.videoId) lyricsBody.textContent = text;
+    }).catch(function(){
+      if (currentTrack && currentTrack.videoId === track.videoId){
+        lyricsBody.textContent = "Không tải được lời nhạc (LRCLIB không phản hồi).";
+      }
+    });
+  }
+  lyricsBtn.addEventListener("click", function(){
+    lyricsVisible = !lyricsVisible;
+    lyricsPanel.classList.toggle("open", lyricsVisible);
+    lyricsBtn.classList.toggle("active", lyricsVisible);
+    if (lyricsVisible && currentTrack) loadLyricsFor(currentTrack);
+    if (lyricsVisible) lyricsPanel.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  });
+
+  /* ---------------- Home & Search ---------------- */
+  function loadHome(){
+    setStatus("warn", "Đang tải gợi ý trang chủ từ Invidious…");
+    content.innerHTML =
+      '<section><div class="section-head"><h2>Nhạc Việt đang hot</h2></div>' + skeletons(6) + '</section>' +
+      '<section><div class="section-head"><h2>Top hits quốc tế</h2></div>' + skeletons(6) + '</section>';
+
+    var vn = searchVideos("nhạc việt nam hot official audio").catch(function(){ return []; });
+    var intl = searchVideos("Bruno Mars Ed Sheeran Dua Lipa Taylor Swift official music video").catch(function(){ return []; });
+
+    Promise.all([vn, intl]).then(function(results){
+      renderSections([
+        { id: "vn", title: "Nhạc Việt đang hot", note: results[0].length + " bài", tracks: results[0] },
+        { id: "intl", title: "Top hits quốc tế", note: results[1].length + " bài", tracks: results[1] }
+      ]);
+      markPlayingCard();
+      var total = results[0].length + results[1].length;
+      if (total > 0){
+        setStatus("", "Đã tải xong gợi ý. Bấm vào một bài để nghe.");
+      } else {
+        setStatus("err", "Chưa tải được gợi ý — các instance Invidious có thể đang quá tải. Hãy thử tìm kiếm ở ô phía trên.");
+      }
+    });
+  }
+
+  document.getElementById("searchForm").addEventListener("submit", function(e){
+    e.preventDefault();
+    var q = document.getElementById("searchInput").value.trim();
+    if (!q){ loadHome(); return; }
+    setStatus("warn", "Đang tìm: " + q + "…");
+    content.innerHTML = '<section><div class="section-head"><h2>Kết quả cho “' + esc(q) + '”</h2></div>' + skeletons(8) + '</section>';
+    searchVideos(q).then(function(tracks){
+      renderSections([{ id: "search", title: "Kết quả cho “" + q + "”", note: tracks.length + " bài", tracks: tracks }]);
+      markPlayingCard();
+      setStatus(tracks.length ? "" : "err",
+        tracks.length ? ("Tìm thấy " + tracks.length + " bài cho “" + q + "”.") : ("Không tìm thấy bài phù hợp cho “" + q + "”."));
+    }).catch(function(){
+      renderSections([{ id: "search", title: "Kết quả cho “" + q + "”", note: "", tracks: [] }]);
+      setStatus("err", "Tìm kiếm thất bại — instance Invidious không phản hồi, thử lại sau ít phút.");
+    });
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  });
+
+  loadHome();
+})();
+</script>
+</body>
+</html>

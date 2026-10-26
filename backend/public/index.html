@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Music Web — bản test MVP</title>
+<style>
+  :root { color-scheme: dark; --bg:#0f1115; --panel:#181b22; --panel2:#20242e; --text:#f2f3f5; --muted:#9aa3b2; --accent:#ff4d6d; }
+  * { box-sizing: border-box; margin:0; padding:0; }
+  body { font-family: system-ui, -apple-system, "Segoe UI", sans-serif; background:var(--bg); color:var(--text); padding-bottom:120px; }
+  header { position:sticky; top:0; z-index:5; background:rgba(15,17,21,.92); backdrop-filter: blur(8px); padding:14px 16px; display:flex; gap:10px; align-items:center; }
+  header .logo { font-weight:800; font-size:19px; white-space:nowrap; } header .logo span { color:var(--accent); }
+  .searchbar { flex:1; display:flex; gap:8px; }
+  input[type=search] { flex:1; background:var(--panel2); border:1px solid #2c313d; color:var(--text); border-radius:999px; padding:10px 16px; font-size:15px; outline:none; }
+  button { background:var(--accent); color:#fff; border:0; border-radius:999px; padding:10px 18px; font-size:15px; cursor:pointer; }
+  button.ghost { background:var(--panel2); }
+  main { max-width:1000px; margin:0 auto; padding:8px 16px; }
+  h2 { font-size:18px; margin:22px 0 12px; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:14px; }
+  .card { background:var(--panel); border-radius:14px; overflow:hidden; cursor:pointer; transition:transform .12s; }
+  .card:hover { transform:translateY(-2px); }
+  .card img { width:100%; aspect-ratio:16/9; object-fit:cover; display:block; background:#000; }
+  .card .meta { padding:10px 12px; }
+  .card .t { font-size:14px; font-weight:600; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+  .card .a { font-size:12px; color:var(--muted); margin-top:4px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .status { color:var(--muted); padding:18px 0; font-size:14px; }
+  #player { position:fixed; left:0; right:0; bottom:0; background:rgba(24,27,34,.97); border-top:1px solid #2c313d; padding:10px 16px calc(10px + env(safe-area-inset-bottom)); z-index:10; }
+  #player .row { max-width:1000px; margin:0 auto; display:flex; align-items:center; gap:12px; }
+  #player img { width:52px; height:52px; border-radius:8px; object-fit:cover; background:#000; }
+  #nowMeta { flex:1; min-width:0; } #nowTitle { font-weight:700; font-size:14px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  #nowArtist { font-size:12px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .controls { display:flex; gap:8px; align-items:center; }
+  .controls button { width:42px; height:42px; padding:0; font-size:17px; }
+  #seekRow { max-width:1000px; margin:8px auto 0; display:flex; gap:10px; align-items:center; font-size:12px; color:var(--muted); }
+  input[type=range] { flex:1; accent-color:var(--accent); }
+  #lyricsBox { max-width:1000px; margin:14px auto 0; background:var(--panel); border-radius:14px; padding:16px; white-space:pre-wrap; font-size:15px; line-height:1.7; max-height:300px; overflow:auto; display:none; }
+  .badge { display:inline-block; background:#2c313d; color:var(--muted); border-radius:6px; padding:2px 7px; font-size:11px; margin-left:8px; vertical-align:middle; }
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">Music<span>Web</span><span class="badge">MVP test</span></div>
+  <form class="searchbar" id="searchForm">
+    <input type="search" id="q" placeholder="Tìm bài hát, ca sĩ..." autocomplete="off">
+    <button type="submit">Tìm</button>
+  </form>
+</header>
+<main>
+  <div id="content"><div class="status">Đang tải gợi ý...</div></div>
+  <div id="lyricsBox"></div>
+</main>
+
+<div id="player">
+  <div class="row">
+    <img id="nowThumb" alt="">
+    <div id="nowMeta"><div id="nowTitle">Chưa chọn bài</div><div id="nowArtist">Tìm hoặc bấm vào một bài để phát</div></div>
+    <div class="controls">
+      <button class="ghost" id="prevBtn" title="Bài trước">⏮</button>
+      <button id="playBtn" title="Phát / tạm dừng">▶</button>
+      <button class="ghost" id="nextBtn" title="Bài tiếp">⏭</button>
+      <button class="ghost" id="lyricsBtn" title="Lời nhạc">🎤</button>
+    </div>
+  </div>
+  <div id="seekRow"><span id="cur">0:00</span><input type="range" id="seek" min="0" max="1000" value="0"><span id="dur">0:00</span></div>
+</div>
+<audio id="audio" preload="none"></audio>
+
+<script>
+const $ = s => document.querySelector(s);
+const audio = $('#audio');
+let queue = [], current = -1, lyricsOn = false;
+
+function fmt(s){ if(!s||isNaN(s)) return '0:00'; s=Math.floor(s); return Math.floor(s/60)+':'+String(s%60).padStart(2,'0'); }
+function esc(s){ return (s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+function card(t, list, idx){
+  const d = document.createElement('div'); d.className='card';
+  d.innerHTML = `<img loading="lazy" src="${t.thumb}" alt=""><div class="meta"><div class="t">${esc(t.title)}</div><div class="a">${esc(t.artist)} · ${fmt(t.duration)}</div></div>`;
+  d.onclick = () => playFrom(list, idx);
+  return d;
+}
+function renderSections(sections){
+  const c = $('#content'); c.innerHTML='';
+  for(const sec of sections){
+    const h = document.createElement('h2'); h.textContent = sec.title; c.appendChild(h);
+    const g = document.createElement('div'); g.className='grid';
+    sec.tracks.forEach((t,i)=> g.appendChild(card(t, sec.tracks, i)));
+    c.appendChild(g);
+  }
+  if(!c.children.length) c.innerHTML = '<div class="status">Không có kết quả.</div>';
+}
+async function loadHome(){
+  try {
+    const r = await fetch('/api/home'); const d = await r.json();
+    renderSections(d.sections || []);
+  } catch(e){ $('#content').innerHTML = '<div class="status">Không tải được gợi ý. Thử tìm kiếm ở trên.</div>'; }
+}
+$('#searchForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  const q = $('#q').value.trim(); if(!q) return;
+  $('#content').innerHTML = '<div class="status">Đang tìm "'+esc(q)+'"... (lần đầu có thể mất vài giây)</div>';
+  try {
+    const r = await fetch('/api/search?q='+encodeURIComponent(q)); const d = await r.json();
+    renderSections([{ title: 'Kết quả cho "'+q+'"', tracks: d.tracks || [] }]);
+  } catch(err){ $('#content').innerHTML = '<div class="status">Tìm kiếm bị lỗi, thử lại sau giây lát.</div>'; }
+});
+
+function playFrom(list, idx){
+  queue = list; current = idx; playCurrent();
+}
+function playCurrent(){
+  const t = queue[current]; if(!t) return;
+  $('#nowTitle').textContent = t.title;
+  $('#nowArtist').textContent = t.artist;
+  $('#nowThumb').src = t.thumb;
+  document.title = '▶ ' + t.title;
+  audio.src = '/api/stream/' + t.id;
+  audio.play().catch(()=>{});
+  $('#playBtn').textContent = '⏸';
+  loadLyrics(t);
+}
+async function loadLyrics(t){
+  const box = $('#lyricsBox');
+  if(!lyricsOn) { box.style.display='none'; return; }
+  box.style.display='block'; box.textContent = 'Đang tải lời...';
+  try {
+    const r = await fetch('/api/lyrics?q='+encodeURIComponent(t.title)); const d = await r.json();
+    box.textContent = d.lyrics ? d.lyrics.replace(/\[[0-9:.]+\]\s?/g,'') : 'Chưa tìm thấy lời cho bài này (nguồn LRCLIB).';
+  } catch(e){ box.textContent = 'Không tải được lời.'; }
+}
+$('#playBtn').onclick = () => {
+  if(!audio.src) return;
+  if(audio.paused){ audio.play(); $('#playBtn').textContent='⏸'; } else { audio.pause(); $('#playBtn').textContent='▶'; }
+};
+$('#nextBtn').onclick = () => { if(current < queue.length-1){ current++; playCurrent(); } };
+$('#prevBtn').onclick = () => { if(current > 0){ current--; playCurrent(); } };
+$('#lyricsBtn').onclick = () => { lyricsOn = !lyricsOn; const t = queue[current]; if(t) loadLyrics(t); else $('#lyricsBox').style.display = lyricsOn ? 'block':'none'; };
+audio.addEventListener('ended', () => { if(current < queue.length-1){ current++; playCurrent(); } });
+audio.addEventListener('timeupdate', () => {
+  $('#cur').textContent = fmt(audio.currentTime);
+  $('#dur').textContent = fmt(audio.duration);
+  if(audio.duration) $('#seek').value = Math.floor(audio.currentTime / audio.duration * 1000);
+});
+$('#seek').addEventListener('input', e => { if(audio.duration) audio.currentTime = e.target.value/1000*audio.duration; });
+loadHome();
+</script>
+</body>
+</html>
